@@ -20,7 +20,6 @@ import android.os.Message;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.KeyEvent;
-import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -30,7 +29,6 @@ import android.view.WindowManager;
 import android.view.animation.TranslateAnimation;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -40,6 +38,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.funsdkdemo.ActivityAll;
+import com.example.funsdkdemo.MyDialog;
 import com.example.funsdkdemo.R;
 import com.example.funsdkdemo.common.DialogInputPasswd;
 import com.example.funsdkdemo.common.UIFactory;
@@ -90,6 +89,7 @@ public class ActivityGuideDeviceCamera
 	private ImageButton addUserDevice = null;
 	//刷新用户设备列表
 	private ImageButton refreshUserDevice = null;
+	ArrayAdapter<String> adapter;
 
 	
 	private LinearLayout mLayoutTop = null;
@@ -194,13 +194,17 @@ public class ActivityGuideDeviceCamera
 
 		mLayoutControls = (LinearLayout) findViewById(R.id.under_content);
 
-		//将IP传入到userDevicesIP中
+		//如果局域网中存在此ip，将IP传入到userDevicesIP中
+		if(isExistLandNet(mFunDevice.getDevIP())){
+			userDevicesIP.add(mFunDevice.getDevIP());
+		}else{
+			Toast.makeText(this,"不存在此设备!",Toast.LENGTH_LONG).show();
+		}
 
-		userDevicesIP.add(mFunDevice.getDevIP());
 
 
 		//用户通过ip连接设备后,显示到列表
-		ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,android.R.layout.simple_list_item_1,userDevicesIP);
+		adapter = new ArrayAdapter<String>(this,android.R.layout.simple_list_item_1,userDevicesIP);
 
 		userDevicesList = (ListView) findViewById(R.id.user_devices_list_view);
 		userDevicesList.setAdapter(adapter);
@@ -530,14 +534,7 @@ public class ActivityGuideDeviceCamera
 				//添加用户设备IP
 				addDevice();
 
-				//如果是从添加Dialog跳转的则将设备添加
-				if(getIntent().getStringExtra("FUN_DEV_IP")!= null){
-					userDevicesIP.add(getIntent().getStringExtra("FUN_DEV_IP"));
-				}
-				ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,android.R.layout.simple_list_item_1,userDevicesIP);
 
-				userDevicesList = (ListView) findViewById(R.id.user_devices_list_view);
-				userDevicesList.setAdapter(adapter);
 			}
 			break;
 		case R.id.refresh_user_device:
@@ -550,58 +547,47 @@ public class ActivityGuideDeviceCamera
 
 	}
 
+	//检验IP是否已经加入到了ListView中
+	private boolean isExistListView(String ip,List<String> ipList){
+		if(ipList.contains(ip)){
+			return true;
+		}else{
+			return false;
+		}
+	}
+
+	//检验IP是否存在于局域网设备列表中
+	private boolean isExistLandNet(String ip){
+		int i;
+		String devSn = ip + ":" + "34567";
+		if(FunSupport.getInstance().findDeviceBySn(devSn)!=null){
+			//如果IP存在于局域网返回true
+			return true;
+		}//没有找到，返回false
+		else{
+			return false;
+		}
+
+	}
 
 	private void addDevice() {
-		// LayoutInflater是用来找layout文件夹下的xml布局文件，并且实例化
-		LayoutInflater factory = LayoutInflater.from(ActivityGuideDeviceCamera.this);
-		// 把add_device_dialog中的控件定义在View中
-		final View textEntryView = factory.inflate(R.layout.add_device_dialog,
-				null);
-
-		// 将控件显示在对话框中
-		new AlertDialog.Builder(ActivityGuideDeviceCamera.this)
-				// 对话框的标题
-				.setTitle("添加设备")
-				// 设定显示的View
-				.setView(textEntryView)
-				// 对话框中的“添加”按钮的点击事件
-				.setPositiveButton("添加", new DialogInterface.OnClickListener() {
-					public void onClick(DialogInterface dialog, int whichButton) {
-
-						// 获取用户输入的“用户名”，“密码”
-						// 注意：textEntryView.findViewById很重要，因为上面factory.inflate(R.layout.add_device_dialog,
-						// null)将页面布局赋值给了textEntryView了
-						final EditText devIP = (EditText) textEntryView
-								.findViewById(R.id.dev_ip);
-
-						// 将页面输入框中获得的IP转为字符串
-						String devIPString = devIP.getText().toString()
-								.trim();
-
-						//如果IP在局域网中存在则添加，并重新跳转页面
-						if (true) {
-							//传入IP，跳转自身
-							Intent intent = new Intent();
-							intent.putExtra("FUN_DEV_IP",devIPString);
-							// 关闭当前页面
-							dialog.dismiss();
-
-						} else {
-							Toast.makeText(ActivityGuideDeviceCamera.this, "不存在设备！！！",
-									Toast.LENGTH_SHORT).show();
+		//创建对话框对象的时候对对话框进行监听
+		MyDialog dialog = new MyDialog(ActivityGuideDeviceCamera.this,
+				new MyDialog.DataBackListener() {
+					@Override
+					public void getData(String data) {
+						String result = data;
+						if(isExistLandNet(data)&&!isExistListView(data,userDevicesIP)){
+							userDevicesIP.add(result);
+							adapter.notifyDataSetChanged();
+						}else if(!isExistLandNet(data)){
+							Toast.makeText(ActivityGuideDeviceCamera.this,"不存在此设备!",Toast.LENGTH_LONG).show();
+						}else{
+							Toast.makeText(ActivityGuideDeviceCamera.this,"设备已存在！",Toast.LENGTH_LONG).show();
 						}
 					}
-				})
-				// 对话框的“取消”单击事件
-				.setNegativeButton("取消", new DialogInterface.OnClickListener() {
-					public void onClick(DialogInterface dialog, int whichButton) {
-						dialog.dismiss();
-					}
-				})
-				// 设置dialog是否为模态，false表示模态，true表示非模态
-				.setCancelable(false)
-				// 对话框的创建、显示
-				.create().show();
+				});
+		dialog.show();
 	}
 
 	private void tryToRecord() {

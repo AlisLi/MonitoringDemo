@@ -24,7 +24,25 @@
         android:layout_toRightOf="@+id/tvuserName"
         android:ems="10" >
 
-        <requestFocus />
     </EditText>
+
+    <Button
+        android:id="@+id/btn_sure"
+        android:layout_width="80dp"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/tvuserName"
+        android:layout_marginTop="25dp"
+        android:layout_marginLeft="30dp"
+        android:text="添加"/>
+
+    <Button
+        android:id="@+id/btn_cancel"
+        android:layout_width="80dp"
+        android:layout_height="wrap_content"
+        android:layout_toRightOf="@id/btn_sure"
+        android:layout_below="@id/tvuserName"
+        android:layout_marginTop="25dp"
+        android:layout_marginLeft="70dp"
+        android:text="取消"/>
 
 </RelativeLayout>

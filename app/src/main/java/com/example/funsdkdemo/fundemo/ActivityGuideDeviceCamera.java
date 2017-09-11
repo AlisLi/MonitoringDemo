@@ -64,6 +64,7 @@ import com.lib.FunSDK;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import static com.example.funsdkdemo.lib.funsdk.support.models.FunDevType.EE_DEV_SPORTCAMERA;
@@ -209,7 +210,7 @@ public class ActivityGuideDeviceCamera
 		//Toast.makeText(this,FunSupport.getInstance().getLanDeviceList().toString(),Toast.LENGTH_LONG).show();
 
 		//如果局域网中存在此ip，将IP传入到userDevicesIP中
-		if(isExistLandNet(mFunDevice.getDevIP())&&!isExistListView(mFunDevice.getDevIP(),userDevicesIP)){
+		if(isExistLandNet(mFunDevice.getDevIP())&&(!isExistListView(mFunDevice.getDevIP(),userDevicesIP))){
 			userDevicesIP.add(mFunDevice.getDevIP());
 		}else if(!isExistLandNet(mFunDevice.getDevIP())){
 			Toast.makeText(ActivityGuideDeviceCamera.this,"不存在此设备!",Toast.LENGTH_LONG).show();
@@ -566,11 +567,52 @@ public class ActivityGuideDeviceCamera
 		case R.id.refresh_user_device:
 			{
 				//刷新用户设备IP
-
+				refreshUserDeviceList();
 
 			}
 		}
 
+	}
+
+	//刷新局域网设备列表
+	private void requestToGetLanDeviceList() {
+		if ( !FunSupport.getInstance().requestLanDeviceList() ) {
+			showToast(R.string.guide_message_error_call);
+		} else {
+			showWaitDialog();
+		}
+	}
+
+	//刷新用户设备IP
+	private void refreshUserDeviceList() {
+		int flag = 1,i;
+
+
+		//刷新局域网中设备列表
+		requestToGetLanDeviceList();
+
+		hideWaitDialog();
+
+		//迭代寻找局域网中是否还存在显示列表中的设备，若没找到则删去，然后刷新列表
+		Iterator<String> it = userDevicesIP.iterator();
+		while (it.hasNext()){
+			String ip = it.next();
+			for(i = 0;i < FunSupport.getInstance().getLanDeviceList().size();i++){
+				if(FunSupport.getInstance().getLanDeviceList().get(i).getDevIP().equals(ip)){
+					break;
+				}
+			}
+
+			if(i == FunSupport.getInstance().getLanDeviceList().size()){
+				it.remove();
+				flag = 0;
+			}
+
+		}
+
+		if(flag == 0){
+			adapter.notifyDataSetChanged();
+		}
 	}
 
 	//切换设备
@@ -599,6 +641,7 @@ public class ActivityGuideDeviceCamera
 		//结束当前活动
 		finish();
 
+		//从自己的活动跳转到自己的活动
 		Intent intent = new Intent();
 		intent.setClass(ActivityGuideDeviceCamera.this,ActivityGuideDeviceCamera.class);
 		intent.putExtra("FUN_DEVICE_ID",tempId);

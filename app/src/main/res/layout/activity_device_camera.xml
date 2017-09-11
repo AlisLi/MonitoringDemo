@@ -139,7 +139,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginRight="200dp"
+            android:layout_marginRight="180dp"
             android:layout_gravity="center_vertical"
             android:textSize="20sp"
             android:text="设备IP列表:"/>

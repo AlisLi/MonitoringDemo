@@ -678,6 +678,12 @@ public class ActivityGuideDeviceCamera
 	}
 
 	private void addDevice() {
+
+		//刷新局域网中设备列表
+		requestToGetLanDeviceList();
+
+		hideWaitDialog();
+
 		//创建对话框对象的时候对对话框进行监听
 		MyDialog dialog = new MyDialog(ActivityGuideDeviceCamera.this,
 				new MyDialog.DataBackListener() {
@@ -695,7 +701,9 @@ public class ActivityGuideDeviceCamera
 						}
 					}
 				});
+		dialog.setTitle("添加设备：");
 		dialog.show();
+
 	}
 
 	private void tryToRecord() {

@@ -24,6 +24,7 @@ public class MyDialog extends Dialog {
         //用传递过来的监听器来初始化
         this.listener = listener;
         setContentView(R.layout.add_device_dialog);
+
         DevIP = (EditText)findViewById(R.id.dev_ip);
         btnSure = (Button)findViewById(R.id.btn_sure);
         btnCancel = (Button) findViewById(R.id.btn_cancel);

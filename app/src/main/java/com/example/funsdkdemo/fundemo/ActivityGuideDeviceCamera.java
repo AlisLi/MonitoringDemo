@@ -160,6 +160,16 @@ public class ActivityGuideDeviceCamera
 
 
 		int devId = getIntent().getIntExtra("FUN_DEVICE_ID", 0);
+		//接收切换以前活动的IP列表
+		String [] tempIPArray = getIntent().getStringArrayExtra("FUN_DEVICE_LIST");
+		//如果是切换设备，将数组转换为列表
+		if(tempIPArray != null){
+			for(String uid: tempIPArray){
+				userDevicesIP.add(uid);
+			}
+		}
+
+
 		mFunDevice = FunSupport.getInstance().findDeviceById(devId);
 
 		if (null == mFunDevice) {
@@ -196,13 +206,15 @@ public class ActivityGuideDeviceCamera
 
 		mLayoutControls = (LinearLayout) findViewById(R.id.under_content);
 
-		Toast.makeText(this,FunSupport.getInstance().getLanDeviceList().toString(),Toast.LENGTH_LONG).show();
+		//Toast.makeText(this,FunSupport.getInstance().getLanDeviceList().toString(),Toast.LENGTH_LONG).show();
 
 		//如果局域网中存在此ip，将IP传入到userDevicesIP中
-		if(isExistLandNet(mFunDevice.getDevIP())){
+		if(isExistLandNet(mFunDevice.getDevIP())&&!isExistListView(mFunDevice.getDevIP(),userDevicesIP)){
 			userDevicesIP.add(mFunDevice.getDevIP());
+		}else if(!isExistLandNet(mFunDevice.getDevIP())){
+			Toast.makeText(ActivityGuideDeviceCamera.this,"不存在此设备!",Toast.LENGTH_LONG).show();
 		}else{
-			Toast.makeText(ActivityGuideDeviceCamera.this,"不存在此设备！",Toast.LENGTH_LONG).show();
+			//Toast.makeText(ActivityGuideDeviceCamera.this,"设备已存在！",Toast.LENGTH_LONG).show();
 		}
 
 
@@ -224,8 +236,6 @@ public class ActivityGuideDeviceCamera
 			public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 				changeDevice(position);
 			}
-
-
 		});
 
 
@@ -565,20 +575,38 @@ public class ActivityGuideDeviceCamera
 
 	//切换设备
 	private int changeDevice(int position) {
+		int i,tempId=0;
 		String ipDate = userDevicesIP.get(position);
-		String DeviceSn = ipDate + ":" + "34567";
-		mFunDevice = FunSupport.getInstance().findDeviceBySn(DeviceSn);
 
-		//如果不存在返回 0；
-		if(mFunDevice == null){
-			return 0;
+
+		//循环查找此ip的设备
+		for(i = 0;i < FunSupport.getInstance().getLanDeviceList().size();i++){
+			if(ipDate.equals(FunSupport.getInstance().getLanDeviceList().get(i).getDevIP())){
+				//获取设备id
+				tempId = FunSupport.getInstance().getLanDeviceList().get(i).getId();
+
+				break;
+			}
 		}
 
-		//显示播放器底部操作栏
-		showVideoControlBar();
+		//没有查询到，返回0
+		if(i == FunSupport.getInstance().getLanDeviceList().size()){
+			return  0;
+		}
 
+		Toast.makeText(ActivityGuideDeviceCamera.this,mFunDevice.getDevName(),Toast.LENGTH_LONG).show();
 
-		requestSystemInfo();
+		//结束当前活动
+		finish();
+
+		Intent intent = new Intent();
+		intent.setClass(ActivityGuideDeviceCamera.this,ActivityGuideDeviceCamera.class);
+		intent.putExtra("FUN_DEVICE_ID",tempId);
+		//将列表转为数组
+		String[] IPArray = userDevicesIP.toArray(new String[userDevicesIP.size()]);
+		//将列表中的IP数据传到切换后的活动中
+		intent.putExtra("FUN_DEVICE_LIST",IPArray);
+		startActivity(intent);
 
 		return 1;
 	}

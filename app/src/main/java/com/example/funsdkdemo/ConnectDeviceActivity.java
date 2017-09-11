@@ -41,9 +41,24 @@ public class ConnectDeviceActivity extends ActivityAll implements View.OnClickLi
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_connect_device);
 
+        //打开APP搜索局域网设备一次
+        requestToGetLanDeviceList();
+
         initView();
 
 
+        hideWaitDialog();
+
+
+    }
+
+    //刷新局域网设备列表
+    private void requestToGetLanDeviceList() {
+        if ( !FunSupport.getInstance().requestLanDeviceList() ) {
+            showToast(R.string.guide_message_error_call);
+        } else {
+            showWaitDialog();
+        }
     }
 
     private void initView() {

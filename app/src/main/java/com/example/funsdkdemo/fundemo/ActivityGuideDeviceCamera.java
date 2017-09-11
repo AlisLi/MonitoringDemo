@@ -27,6 +27,7 @@ import android.view.View.OnTouchListener;
 import android.view.ViewGroup.LayoutParams;
 import android.view.WindowManager;
 import android.view.animation.TranslateAnimation;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ImageButton;
@@ -157,6 +158,7 @@ public class ActivityGuideDeviceCamera
 
 		setContentView(R.layout.activity_device_camera);
 
+
 		int devId = getIntent().getIntExtra("FUN_DEVICE_ID", 0);
 		mFunDevice = FunSupport.getInstance().findDeviceById(devId);
 
@@ -194,11 +196,13 @@ public class ActivityGuideDeviceCamera
 
 		mLayoutControls = (LinearLayout) findViewById(R.id.under_content);
 
+		Toast.makeText(this,FunSupport.getInstance().getLanDeviceList().toString(),Toast.LENGTH_LONG).show();
+
 		//如果局域网中存在此ip，将IP传入到userDevicesIP中
 		if(isExistLandNet(mFunDevice.getDevIP())){
 			userDevicesIP.add(mFunDevice.getDevIP());
 		}else{
-			Toast.makeText(this,"不存在此设备!",Toast.LENGTH_LONG).show();
+			Toast.makeText(ActivityGuideDeviceCamera.this,"不存在此设备！",Toast.LENGTH_LONG).show();
 		}
 
 
@@ -213,6 +217,16 @@ public class ActivityGuideDeviceCamera
 		refreshUserDevice = (ImageButton) findViewById(R.id.refresh_user_device);
 		addUserDevice.setOnClickListener(this);
 		refreshUserDevice.setOnClickListener(this);
+
+		//点击设备列表，进行设备切换
+		userDevicesList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+			@Override
+			public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+				changeDevice(position);
+			}
+
+
+		});
 
 
 		mTextTitle.setText(mFunDevice.devIp);
@@ -290,6 +304,8 @@ public class ActivityGuideDeviceCamera
 			requestSystemInfo();
 		}
 	}
+
+
 
 
 	@Override
@@ -547,6 +563,26 @@ public class ActivityGuideDeviceCamera
 
 	}
 
+	//切换设备
+	private int changeDevice(int position) {
+		String ipDate = userDevicesIP.get(position);
+		String DeviceSn = ipDate + ":" + "34567";
+		mFunDevice = FunSupport.getInstance().findDeviceBySn(DeviceSn);
+
+		//如果不存在返回 0；
+		if(mFunDevice == null){
+			return 0;
+		}
+
+		//显示播放器底部操作栏
+		showVideoControlBar();
+
+
+		requestSystemInfo();
+
+		return 1;
+	}
+
 	//检验IP是否已经加入到了ListView中
 	private boolean isExistListView(String ip,List<String> ipList){
 		if(ipList.contains(ip)){
@@ -559,14 +595,14 @@ public class ActivityGuideDeviceCamera
 	//检验IP是否存在于局域网设备列表中
 	private boolean isExistLandNet(String ip){
 		int i;
-		String devSn = ip + ":" + "34567";
-		if(FunSupport.getInstance().findDeviceBySn(devSn)!=null){
-			//如果IP存在于局域网返回true
-			return true;
-		}//没有找到，返回false
-		else{
-			return false;
+
+		for(i = 0;i < FunSupport.getInstance().getLanDeviceList().size();i++){
+			if(ip.equals(FunSupport.getInstance().getLanDeviceList().get(i).getDevIP())){
+				//如果IP存在于局域网返回true
+				return true;
+			}
 		}
+		return false;
 
 	}
 
@@ -574,6 +610,7 @@ public class ActivityGuideDeviceCamera
 		//创建对话框对象的时候对对话框进行监听
 		MyDialog dialog = new MyDialog(ActivityGuideDeviceCamera.this,
 				new MyDialog.DataBackListener() {
+					//利用回调机制
 					@Override
 					public void getData(String data) {
 						String result = data;

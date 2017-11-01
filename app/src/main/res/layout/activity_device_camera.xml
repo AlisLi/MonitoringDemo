@@ -175,17 +175,24 @@
         android:id="@+id/under_content"
         android:layout_below="@+id/line"
         android:layout_width="match_parent"
-        android:layout_height="200dp"
+        android:layout_height="match_parent"
         android:orientation="vertical">
 
-        <ListView
+        <!--<ListView
             android:id="@+id/user_devices_list_view"
             android:layout_width="match_parent"
             android:layout_height="match_parent">
 
 
-        </ListView>
+        </ListView>-->
 
+        <android.support.v7.widget.RecyclerView
+            android:id="@+id/recyclerView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scrollbars="none">
+
+        </android.support.v7.widget.RecyclerView>
 
     </LinearLayout>
 

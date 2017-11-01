@@ -17,6 +17,9 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.support.v7.widget.DefaultItemAnimator;
+import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.StaggeredGridLayoutManager;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.KeyEvent;
@@ -27,18 +30,16 @@ import android.view.View.OnTouchListener;
 import android.view.ViewGroup.LayoutParams;
 import android.view.WindowManager;
 import android.view.animation.TranslateAnimation;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.ListView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.funsdkdemo.ActivityAll;
+import com.example.funsdkdemo.MyAdapter;
 import com.example.funsdkdemo.MyDialog;
 import com.example.funsdkdemo.R;
 import com.example.funsdkdemo.common.DialogInputPasswd;
@@ -85,13 +86,13 @@ public class ActivityGuideDeviceCamera
 
 	//通过ip连接的设备列表
 	private List<String> userDevicesIP = new ArrayList<String>();
-	private ListView userDevicesList;
+	private RecyclerView userDevicesList;
 
 	//添加用户设备列表
 	private ImageButton addUserDevice = null;
 	//刷新用户设备列表
 	private ImageButton refreshUserDevice = null;
-	ArrayAdapter<String> adapter;
+	private MyAdapter adapter;
 
 	
 	private LinearLayout mLayoutTop = null;
@@ -138,7 +139,7 @@ public class ActivityGuideDeviceCamera
 	private int mChannelCount;
 	private boolean isGetSysFirst = true;
 
-	
+	private final int REFRESH_DEVICE_LIST = 1;
 	private final int MESSAGE_PLAY_MEDIA = 0x100;
 	private final int MESSAGE_AUTO_HIDE_CONTROL_BAR = 0x102;
 	private final int MESSAGE_TOAST_SCREENSHOT_PREVIEW = 0x103;
@@ -169,6 +170,7 @@ public class ActivityGuideDeviceCamera
 				userDevicesIP.add(uid);
 			}
 		}
+
 
 
 		mFunDevice = FunSupport.getInstance().findDeviceById(devId);
@@ -209,6 +211,8 @@ public class ActivityGuideDeviceCamera
 
 		//Toast.makeText(this,FunSupport.getInstance().getLanDeviceList().toString(),Toast.LENGTH_LONG).show();
 
+
+
 		//如果局域网中存在此ip，将IP传入到userDevicesIP中
 		if(isExistLandNet(mFunDevice.getDevIP())&&(!isExistListView(mFunDevice.getDevIP(),userDevicesIP))){
 			userDevicesIP.add(mFunDevice.getDevIP());
@@ -220,24 +224,32 @@ public class ActivityGuideDeviceCamera
 
 
 
-		//用户通过ip连接设备后,显示到列表
-		adapter = new ArrayAdapter<String>(this,android.R.layout.simple_list_item_1,userDevicesIP);
+		userDevicesList = (RecyclerView) findViewById(R.id.recyclerView);
+		userDevicesList.setHasFixedSize(true);//如果可以确定每个item的高度是固定的，设置这个选项可以提高性能
 
-		userDevicesList = (ListView) findViewById(R.id.user_devices_list_view);
+		userDevicesList.setLayoutManager(new StaggeredGridLayoutManager(2,StaggeredGridLayoutManager.VERTICAL));//设置RecyclerView的布局管理
+		userDevicesList.setItemAnimator(new DefaultItemAnimator());//设置item的添加删除动画，采用默认的动画效果
+		adapter = new MyAdapter(this,userDevicesIP);
 		userDevicesList.setAdapter(adapter);
+
+		adapter.setOnItemClickListener(new MyAdapter.OnItemClickListener() {    //添加监听器
+			@Override
+			public void onItemClick(View view, int position) {
+				changeDevice(position);
+			}
+
+			@Override
+			public void onItemLongClick(View view, int position) {
+
+			}
+		});
+
 
 		addUserDevice = (ImageButton) findViewById(R.id.add_user_device);
 		refreshUserDevice = (ImageButton) findViewById(R.id.refresh_user_device);
 		addUserDevice.setOnClickListener(this);
 		refreshUserDevice.setOnClickListener(this);
 
-		//点击设备列表，进行设备切换
-		userDevicesList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-			@Override
-			public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-				changeDevice(position);
-			}
-		});
 
 
 		mTextTitle.setText(mFunDevice.devIp);
@@ -574,12 +586,34 @@ public class ActivityGuideDeviceCamera
 
 	}
 
+	private Handler handler = new Handler(){
+		public  void handleMessage(Message msg){
+			switch (msg.what){
+				case REFRESH_DEVICE_LIST:
+					showWaitDialog();
+			}
+		}
+	};
+
 	//刷新局域网设备列表
 	private void requestToGetLanDeviceList() {
 		if ( !FunSupport.getInstance().requestLanDeviceList() ) {
 			showToast(R.string.guide_message_error_call);
 		} else {
-			showWaitDialog();
+			new Thread(new Runnable() {
+				@Override
+				public void run() {
+					try {
+						Message message = new Message();
+						message.what = REFRESH_DEVICE_LIST;
+						handler.sendMessage(message);
+						Thread.sleep(500);
+						hideWaitDialog();
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+			}).start();
 		}
 	}
 
@@ -591,7 +625,7 @@ public class ActivityGuideDeviceCamera
 		//刷新局域网中设备列表
 		requestToGetLanDeviceList();
 
-		hideWaitDialog();
+
 
 		//迭代寻找局域网中是否还存在显示列表中的设备，若没找到则删去，然后刷新列表
 		Iterator<String> it = userDevicesIP.iterator();
@@ -682,7 +716,6 @@ public class ActivityGuideDeviceCamera
 		//刷新局域网中设备列表
 		requestToGetLanDeviceList();
 
-		hideWaitDialog();
 
 		//创建对话框对象的时候对对话框进行监听
 		MyDialog dialog = new MyDialog(ActivityGuideDeviceCamera.this,
@@ -693,7 +726,7 @@ public class ActivityGuideDeviceCamera
 						String result = data;
 						if(isExistLandNet(data)&&!isExistListView(data,userDevicesIP)){
 							userDevicesIP.add(result);
-							adapter.notifyDataSetChanged();
+							adapter.notifyItemInserted(1);
 						}else if(!isExistLandNet(data)){
 							Toast.makeText(ActivityGuideDeviceCamera.this,"不存在此设备!",Toast.LENGTH_LONG).show();
 						}else{
